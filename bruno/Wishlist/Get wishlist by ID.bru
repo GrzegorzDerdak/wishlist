@@ -1,0 +1,15 @@
+meta {
+  name: Get wishlist by ID
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://0.0.0.0:8000/api/v1/wishlists/1
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: my-secret-token
+}
