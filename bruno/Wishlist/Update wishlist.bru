@@ -1,11 +1,11 @@
 meta {
   name: Update wishlist
   type: http
-  seq: 4
+  seq: 3
 }
 
 put {
-  url: http://0.0.0.0:8000/api/v1/wishlists/13
+  url: {{APP_URL}}/api/v1/wishlists/1
   body: json
   auth: none
 }
@@ -16,8 +16,8 @@ headers {
 
 body:json {
   {
-    "name": "Test xxxx",
+    "name": "Christmas Gifts",
     "isPublic": false,
-    "description": "My dex"
+    "description": "My description - updated"
   }
 }

@@ -1,0 +1,35 @@
+meta {
+  name: Saleor refresh token
+  type: graphql
+  seq: 8
+}
+
+post {
+  url: {{SALEOR_URL}}/graphql/
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation TokenRefresh($refreshToken: String!) {
+    tokenRefresh(refreshToken: $refreshToken) {
+      token
+      errors {
+        field
+        message
+        code
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "refreshToken": "{{JWT_REFRESH_TOKEN}}"
+  }
+}
+
+script:post-response {
+  const accessToken = res.body.data.tokenRefresh.token;
+  bru.setEnvVar("JWT_ACCESS_TOKEN", refreshToken);
+}

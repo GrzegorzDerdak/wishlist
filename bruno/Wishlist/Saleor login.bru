@@ -1,0 +1,39 @@
+meta {
+  name: Saleor login
+  type: graphql
+  seq: 6
+}
+
+post {
+  url: {{SALEOR_URL}}/graphql/
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation TokenCreate($email: String!, $password: String!) {
+    tokenCreate(email: $email, password: $password) {
+      token
+      refreshToken
+      errors {
+        field
+        message
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "email": "{{process.env.USERNAME}}",
+    "password": "{{process.env.PASSWORD}}"
+  }
+}
+
+script:post-response {
+  const accessToken = res.body.data.tokenCreate.token;
+  bru.setEnvVar("JWT_ACCESS_TOKEN", accessToken);
+  
+  const refreshToken = res.body.data.tokenCreate.refreshToken;
+  bru.setEnvVar("JWT_REFRESH_TOKEN", refreshToken);
+}
