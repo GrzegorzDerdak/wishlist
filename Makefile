@@ -1,8 +1,8 @@
 build:
-	go build -o bin/main.go .
+	go build -o ./bin/main.go .
 
 run: build
 	./bin/main.go
 
 clean:
-	rm -rf bin
+	rm -rf ./bin

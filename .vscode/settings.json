@@ -4,5 +4,6 @@
   "editor.codeActionsOnSave": {
     "source.organizeImports": "always"
   },
-  "editor.defaultFormatter": "golang.go"
+  "editor.defaultFormatter": "golang.go",
+  "makefile.configureOnOpen": false
 }

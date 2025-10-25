@@ -1,0 +1,34 @@
+meta {
+  name: Refresh token
+  type: graphql
+  seq: 6
+}
+
+post {
+  url: https://gderdak.eu.saleor.cloud/graphql/
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation tokenCreate {
+    tokenCreate(
+      email: "grzegorz.derdak+customer2@mirumee.com"
+      password: "test_password"
+      audience: ""
+    ) {
+      token
+      errors {
+        field
+        message
+      }
+    }
+  }
+  
+}
+
+script:post-response {
+  const token = res.body.data.tokenCreate.token;
+  
+  bru.setEnvVar("TOKEN",token)
+}

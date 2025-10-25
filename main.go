@@ -1,67 +1,64 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/mux"
 
 	"wishlist/internal"
+	"wishlist/logger"
 	"wishlist/saleor"
+	"wishlist/wishlists"
 )
 
 func main() {
+	l := logger.Get()
 	config := internal.NewConfig()
+
 	db, err := internal.ConnectToDatabase(config.DSN)
 	if err != nil {
-		log.Fatal(err)
+		l.Fatal().Err(err).Msg("Failed to connect to the database")
 	}
 
-	db.AutoMigrate(&internal.Item{})
-	db.AutoMigrate(&internal.Wishlist{})
+	db.AutoMigrate(&wishlists.Item{})
+	db.AutoMigrate(&wishlists.Wishlist{})
 	db.AutoMigrate(&saleor.SaleorConfig{})
 
-	r := mux.NewRouter().StrictSlash(true)
+	r := mux.NewRouter().StrictSlash(false)
+	r.Use(internal.RequestIDMiddleware)
 
+	// Healthcheck endpoint
 	r.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
 
-	wishlistHandler := internal.NewWishlistHandler(internal.NewWishlistService(internal.NewWishlistRepository(db)))
-	// Temporary handler for unimplemented endpoints
-	protectedRoute := internal.AuthMiddleware(http.HandlerFunc(internal.HandleNotImplemented))
+	// Saleor API
+	saleorApi := r.PathPrefix("/saleor").Subrouter()
+	saleorHandler := saleor.NewSaleorHandler(
+		saleor.NewSaleorManifestService(
+			saleor.NewSaleorRepository(db),
+		),
+	)
+	saleorHandler.RegisterRoutes(saleorApi)
 
-	// Wishlist management
-	r.Handle("/api/v1/wishlists", internal.AuthMiddleware(http.HandlerFunc(wishlistHandler.Create))).Methods("POST")
+	authMiddleware, err := internal.CreateAuthMiddleware(config.JWKSURL)
 
-	r.Handle("/api/v1/wishlists", protectedRoute).Methods("GET")
-	r.Handle("/api/v1/wishlists/{wishlist_id}", protectedRoute).Methods("PUT")
-	r.Handle("/api/v1/wishlists/{wishlist_id}", protectedRoute).Methods("DELETE")
-	r.HandleFunc("/api/v1/wishlists/{wishlist_id}", wishlistHandler.GetByID).Methods("GET")
+	if err != nil {
+		l.Fatal().Err(err).Msg("Could not create auth middleware.")
+	}
 
-	// Wishlist item management
-	r.Handle("/api/v1/wishlists/{wishlist_id}/items", protectedRoute).Methods("POST")
-	r.Handle("/api/v1/wishlists/{wishlist_id}/items/{item_id}", protectedRoute).Methods("DELETE")
-	r.Handle("/api/v1/wishlists/{wishlist_id}/items/{item_id}", protectedRoute).Methods("PUT")
-	r.Handle("/api/v1/wishlists/{wishlist_id}/items", protectedRoute).Methods("GET")
+	// Wishlists API
+	wishlistsApi := r.PathPrefix("/api/v1/wishlists").Subrouter()
+	wishlistsApi.Use(authMiddleware.Middleware)
 
-	// Wishlist publishing
-	r.Handle("/api/v1/wishlists/{wishlist_id}/publish", protectedRoute).Methods("POST")
-	r.Handle("/api/v1/wishlists/{wishlist_id}/unpublish", protectedRoute).Methods("POST")
-
-	// Saleor URLs
-	saleorConfigRepository := saleor.NewSaleorConfigRepository(db)
-	saleorConfigService := saleor.NewSaleorManifestService(saleorConfigRepository)
-	saleorManifestHandler := saleor.NewSaleorManifestHandler(saleorConfigService)
-
-	r.HandleFunc("/saleor/manifest", saleorManifestHandler.ManifestGetHandler)
-	// r.HandleFunc("/saleor/app", saleor.AppHandler)
-	r.HandleFunc("/saleor/register", saleorManifestHandler.ManifestRegisterHandler)
-	// r.HandleFunc("/saleor/support", saleor.BaseHandler)
-	// r.HandleFunc("/saleor/homepage", saleor.BaseHandler)
-	// r.HandleFunc("/saleor/configuration", saleor.BaseHandler)
+	wishlistHandler := wishlists.NewWishlistHandler(
+		wishlists.NewWishlistService(
+			wishlists.NewWishlistRepository(db),
+		),
+	)
+	wishlistHandler.RegisterRoutes(wishlistsApi)
 
 	// Default handler
 	http.Handle("/", r)
@@ -75,6 +72,6 @@ func main() {
 		IdleTimeout:  time.Second * 60,
 	}
 
-	log.Println("Starting server on " + ":" + config.Port)
+	l.Debug().Str("Starting server on port", config.Port).Msg("Server starting")
 	server.ListenAndServe()
 }

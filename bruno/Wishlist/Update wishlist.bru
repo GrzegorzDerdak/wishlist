@@ -1,0 +1,23 @@
+meta {
+  name: Update wishlist
+  type: http
+  seq: 4
+}
+
+put {
+  url: http://0.0.0.0:8000/api/v1/wishlists/13
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{TOKEN}}
+}
+
+body:json {
+  {
+    "name": "Test xxxx",
+    "isPublic": false,
+    "description": "My dex"
+  }
+}

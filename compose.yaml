@@ -1,4 +1,3 @@
-
 services:
   wishlist-db:
     container_name: wishlist-db
@@ -9,17 +8,35 @@ services:
       POSTGRES_PASSWORD: wishlist
     ports:
       - "5432:5432"
-  
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wishlist"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   wishlist-api:
     container_name: wishlist-api
     build: .
     environment:
       APP_DOMAIN: ${APP_DOMAIN}
-      DATABASE_URL: ${APP_DOMAIN} 
       PORT: ${PORT:-8080}
+      DSN: "postgres://wishlist:wishlist@wishlist-db:5432/wishlist?sslmode=disable"
+      JWKS_URL: ${JWKS_URL}
+      LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
-    volumes:
-      - .:/app
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -f http://localhost:${PORT:-8080}/healthcheck || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     depends_on:
-      - wishlist-db
+      wishlist-db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
