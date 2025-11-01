@@ -44,7 +44,7 @@ jobs:
       run: docker save wishlist-app:${{ github.sha }} | gzip > wishlist-app-${{ github.sha }}.tar.gz
 
     - name: Upload Docker image artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: wishlist-app-${{ github.sha }}
         path: wishlist-app-${{ github.sha }}.tar.gz
